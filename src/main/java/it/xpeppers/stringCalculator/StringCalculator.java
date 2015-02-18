@@ -8,41 +8,47 @@ import it.xpeppers.stringCalculator.exception.NegativeNumberException;
 
 public class StringCalculator {
 
-	private static String DEFAULT_DELIMITER = ",|";
-
 	public int add(String string) throws NegativeNumberException {
-		String delimiters = DEFAULT_DELIMITER;
-		String numbers = string;
-		if (string.startsWith("//")) {
-			int newLineIndex = string.indexOf("\n");
-			String surroundedDelimiters = string.substring(2, newLineIndex);
-			if (surroundedDelimiters.contains("["))
-				delimiters = extractDelimiters(surroundedDelimiters,
-						new String());
-			else
-				delimiters = surroundedDelimiters + "|";
-			numbers = string.substring(newLineIndex + 1);
-		}
-		String regex = delimiters + "\n";
-		List<String> numbersArray = Arrays.asList(numbers.split(regex));
-		List<Integer> negativeNumbers = new ArrayList<Integer>();
-		return addNumbers(numbersArray, negativeNumbers);
+		return addNumbers(extractNumbersList(string), new ArrayList<Integer>());
 	}
 
-	private String extractDelimiters(String surroundedDelimiters,
-			String delimiters) {
-		if (surroundedDelimiters.isEmpty())
-			return delimiters;
+	private List<String> extractNumbersList(String string) {		
+		return Arrays.asList(extractNumbersString(string).split(generateRegex(string)));
+	}
 
-		int initDelimiterPosition = surroundedDelimiters.indexOf("[");
-		int endDelimiterPosition = surroundedDelimiters.indexOf("]");
-		String extractedDelimiter = surroundedDelimiters.substring(
-				initDelimiterPosition +1, endDelimiterPosition);
-		String delimiter = getRegexForDelimiter(extractedDelimiter);
-		String tailSurroundedDelimiter = surroundedDelimiters
-				.substring(endDelimiterPosition + 1);
-		return extractDelimiters(tailSurroundedDelimiter, delimiters
-				+ delimiter + "|");
+	private String generateRegex(String string) {
+		String regex = ",|";
+		if (string.startsWith("//")) {
+			String delimitersString = string.substring(2, string.indexOf("\n"));
+			if (delimitersString.contains("["))
+				regex = generateRegexFromDelimiters(delimitersString,
+						new String());
+			else
+				regex = delimitersString + "|";
+		}
+		regex += "\n";
+		return regex;
+	}
+
+	private String extractNumbersString(String string) {
+		if (string.startsWith("//"))
+			return string.substring(string.indexOf("\n") + 1);
+		return string;
+	}
+
+	private String generateRegexFromDelimiters(String surroundedDelimiters,
+			String regex) {
+		if (surroundedDelimiters.isEmpty())
+			return regex;
+
+		return generateRegexFromDelimiters(surroundedDelimiters
+				.substring(surroundedDelimiters.indexOf("]") + 1), regex
+				+ getRegexForDelimiter(extractDelimiter(surroundedDelimiters)) + "|");
+	}
+	
+	private String extractDelimiter(String surroundedDelimiters){
+		return surroundedDelimiters.substring(
+				surroundedDelimiters.indexOf("[") + 1, surroundedDelimiters.indexOf("]"));
 	}
 
 	private String getRegexForDelimiter(String delimiter) {
@@ -55,22 +61,38 @@ public class StringCalculator {
 
 	private int addNumbers(List<String> numbersArray,
 			List<Integer> negativeNumbers) throws NegativeNumberException {
-		if (numbersArray.size() == 0
-				|| (numbersArray.size() == 1 && numbersArray.get(0).isEmpty())) {
-			if (!negativeNumbers.isEmpty())
-				throw new NegativeNumberException(negativeNumbers);
+		if (isLastIteration(numbersArray)) {
+			checkNegativeNumber(negativeNumbers);
 			return 0;
 		} else {
-			String numberString = numbersArray.get(0);
-			Integer number = Integer.parseInt(numberString);
-			if (number < 0)
-				negativeNumbers.add(number);
-			if (number > 1000)
-				number = 0;
-			return number
+			if (convertStringToInt(numbersArray.get(0)) < 0)
+				negativeNumbers.add(convertStringToInt(numbersArray.get(0)));
+
+			return threshold(convertStringToInt(numbersArray.get(0)))
 					+ addNumbers(numbersArray.subList(1, numbersArray.size()),
 							negativeNumbers);
 		}
+	}
+
+	private int threshold(int number) {
+		if (number > 1000)
+			return 0;
+		return number;
+	}
+
+	private int convertStringToInt(String number) {
+		return Integer.parseInt(number);
+	}
+
+	private void checkNegativeNumber(List<Integer> negativeNumbers)
+			throws NegativeNumberException {
+		if (!negativeNumbers.isEmpty())
+			throw new NegativeNumberException(negativeNumbers);
+	}
+
+	private boolean isLastIteration(List<String> numbersArray) {
+		return numbersArray.size() == 0
+				|| (numbersArray.size() == 1 && numbersArray.get(0).isEmpty());
 	}
 
 }
